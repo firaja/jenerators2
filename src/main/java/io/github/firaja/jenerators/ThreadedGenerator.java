@@ -20,17 +20,7 @@ public abstract class ThreadedGenerator<T> implements Generator<T>
 
     private boolean nextItemAvailable;
 
-    @Override
-    public T last()
-    {
-        return yielded;
-    }
 
-    @Override
-    public void reset()
-    {
-
-    }
 
     @Override
     public Iterator<T> iterator()

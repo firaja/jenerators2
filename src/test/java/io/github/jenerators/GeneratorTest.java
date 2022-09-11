@@ -41,7 +41,7 @@ public class GeneratorTest
             System.out.println(s);
         }
 
-        simpleGenerator.reset();
+
 
         for (Integer s : simpleGenerator)
         {
