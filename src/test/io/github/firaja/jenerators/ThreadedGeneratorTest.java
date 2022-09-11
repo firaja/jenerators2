@@ -11,7 +11,7 @@ import org.junit.runner.RunWith;
 
 @RunWith(JUnitPlatform.class)
 @SelectPackages("io.github.firaja.jenerators")
-@SelectClasses({ ThreadedGenerator.class})
+@SelectClasses({ ThreadedGenerator.class })
 public class ThreadedGeneratorTest
 {
 
@@ -22,6 +22,21 @@ public class ThreadedGeneratorTest
     private Generator<Long> naturalsGenerator;
 
     private Generator<String> loremIpsumGenerator;
+
+    private static <T> T counterTest(Generator<T> gen, long counter)
+    {
+        long i = 0;
+        for (T f : gen)
+        {
+            if (i >= counter)
+            {
+                break;
+
+            }
+            i++;
+        }
+        return gen.last();
+    }
 
     @BeforeEach
     void before()
@@ -55,6 +70,7 @@ public class ThreadedGeneratorTest
                 {
                     this.yield(n);
                     n++;
+
                 }
 
             }
@@ -85,13 +101,10 @@ public class ThreadedGeneratorTest
                 this.yield("magna");
                 this.yield("aliqua");
 
-
             }
         };
 
-
     }
-
 
     @Test
     public void testNaturals1()
@@ -110,11 +123,23 @@ public class ThreadedGeneratorTest
     }
 
     @Test
-    public void testNaturals3()
+    public void testNaturals3() throws InterruptedException
     {
-        long result = counterTest(naturalsGenerator, 10);
+        method();
 
-        //naturalsGenerator.reset();
+        while (true)
+        {
+            System.out.println("3 Number of threads " + Thread.activeCount());
+            Thread.sleep(100);
+        }
+    }
+
+    private void method()
+    {
+        System.out.println("1 Number of threads " + Thread.activeCount());
+        long result = counterTest(naturalsGenerator, 10);
+        System.out.println("2 Number of threads " + Thread.activeCount());
+        naturalsGenerator.reset();
 
         result += counterTest(naturalsGenerator, 20);
 
@@ -141,7 +166,7 @@ public class ThreadedGeneratorTest
     public void testLoremIpsum1()
     {
         StringBuilder sb = new StringBuilder();
-        for (String li: loremIpsumGenerator)
+        for (String li : loremIpsumGenerator)
         {
             sb.append(li).append(" ");
         }
@@ -152,18 +177,17 @@ public class ThreadedGeneratorTest
     public void testLoremIpsum2()
     {
         StringBuilder sb = new StringBuilder();
-        for (String li: loremIpsumGenerator)
+        for (String li : loremIpsumGenerator)
         {
             sb.append(li).append(" ");
         }
 
         loremIpsumGenerator.reset();
 
-        for (String li: loremIpsumGenerator)
+        for (String li : loremIpsumGenerator)
         {
             sb.append(li).append(" ");
         }
-
 
         Assertions.assertEquals(LOREM_IPSUM + LOREM_IPSUM, sb.toString());
     }
@@ -172,32 +196,16 @@ public class ThreadedGeneratorTest
     public void testLoremIpsum3()
     {
         StringBuilder sb = new StringBuilder();
-        for (String li: loremIpsumGenerator)
+        for (String li : loremIpsumGenerator)
         {
             sb.append(li).append(" ");
         }
 
-        for (String li: loremIpsumGenerator)
+        for (String li : loremIpsumGenerator)
         {
             sb.append(li).append(" ");
         }
-
 
         Assertions.assertEquals(LOREM_IPSUM, sb.toString());
-    }
-
-
-    private static <T> T counterTest(Generator<T> gen, long counter)
-    {
-        long i = 0;
-        for (T f : gen)
-        {
-            if (i >= counter)
-            {
-                break;
-            }
-            i++;
-        }
-        return gen.last();
     }
 }

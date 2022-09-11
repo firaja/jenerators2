@@ -1,7 +1,9 @@
 package io.github.firaja.jenerators;
 
+
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 
@@ -12,7 +14,8 @@ public abstract class ThreadedGenerator<T> implements Generator<T>
 
     private Lock consumerLock;
 
-    private Thread thread;
+    private ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private Runnable thread;
 
     private boolean hasFinished;
 
@@ -29,16 +32,9 @@ public abstract class ThreadedGenerator<T> implements Generator<T>
     {
         if (thread != null)
         {
-            try
-            {
-                thread.interrupt();
-                thread.join();
-            }
-            catch (InterruptedException e)
-            {
-                thread.interrupt();
-            }
+            executorService.shutdownNow();
         }
+        executorService = Executors.newSingleThreadExecutor();
         hasFinished = false;
         thread = null;
         yielded = null;
@@ -46,6 +42,7 @@ public abstract class ThreadedGenerator<T> implements Generator<T>
 
         producerLock = new Lock();
         consumerLock = new Lock();
+
     }
 
     @Override
@@ -109,6 +106,10 @@ public abstract class ThreadedGenerator<T> implements Generator<T>
     @SuppressWarnings("java:S6213")
     protected void yield(T value)
     {
+        if (Thread.currentThread().isInterrupted())
+        {
+            return;
+        }
         yielded = value;
         yieldCalled = true;
         producerLock.start();
@@ -126,18 +127,18 @@ public abstract class ThreadedGenerator<T> implements Generator<T>
 
     private void startThread()
     {
-        thread = Executors.defaultThreadFactory().newThread(this::wrapperGenerate);
-        thread.start();
+        thread = this::wrapperGenerate;
+        executorService.submit(thread);
     }
 
     @SuppressWarnings("java:S1113")
     @Override
     protected void finalize() throws Throwable
     {
-        thread.interrupt();
-        thread.join();
+        executorService.shutdownNow();
         super.finalize();
     }
+
 
     @SuppressWarnings("java:S2446")
     private static class Lock
