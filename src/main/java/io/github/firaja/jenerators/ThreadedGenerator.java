@@ -37,7 +37,6 @@ public abstract class ThreadedGenerator<T> implements Generator<T>
     {
         return new Iterator<T>()
         {
-
             @Override
             public boolean hasNext()
             {
@@ -76,17 +75,26 @@ public abstract class ThreadedGenerator<T> implements Generator<T>
             {
                 throw new UnsupportedOperationException();
             }
-
         };
     }
 
+
+
+
+
     @SuppressWarnings("java:S6213")
-    protected void yield(T element)
+    protected void yield(T value)
     {
-        yielded = element;
-        nextItemAvailable = true;
-        producerLock.start();
-        consumerLock.stop();
+        this.yield(this, value);
+    }
+
+    @SuppressWarnings("java:S6213")
+    void yield(ThreadedGenerator<T> target, T value)
+    {
+        target.yielded = value;
+        target.nextItemAvailable = true;
+        target.producerLock.start();
+        target.consumerLock.stop();
     }
 
     private void wrapperGenerate()
@@ -145,5 +153,8 @@ public abstract class ThreadedGenerator<T> implements Generator<T>
             }
         }
     }
+
+
+
 
 }
