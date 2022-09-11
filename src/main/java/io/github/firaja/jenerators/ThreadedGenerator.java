@@ -8,19 +8,57 @@ import java.util.concurrent.Executors;
 public abstract class ThreadedGenerator<T> implements Generator<T>
 {
 
-    private final Lock producerLock = new Lock();
+    private Lock producerLock;
 
-    private final Lock consumerLock = new Lock();
+    private Lock consumerLock;
 
-    private Thread producer;
+    private Thread thread;
 
     private boolean hasFinished;
 
     private T yielded;
 
-    private boolean nextItemAvailable;
+    private boolean yieldCalled;
 
+    public ThreadedGenerator()
+    {
+        initialize();
+    }
 
+    private void initialize()
+    {
+        if (thread != null)
+        {
+            try
+            {
+                thread.interrupt();
+                thread.join();
+            }
+            catch (InterruptedException e)
+            {
+                thread.interrupt();
+            }
+        }
+        hasFinished = false;
+        thread = null;
+        yielded = null;
+        yieldCalled = false;
+
+        producerLock = new Lock();
+        consumerLock = new Lock();
+    }
+
+    @Override
+    public T last()
+    {
+        return yielded;
+    }
+
+    @Override
+    public void reset()
+    {
+        initialize();
+    }
 
     @Override
     public Iterator<T> iterator()
@@ -30,7 +68,7 @@ public abstract class ThreadedGenerator<T> implements Generator<T>
             @Override
             public boolean hasNext()
             {
-                if (nextItemAvailable)
+                if (yieldCalled)
                 {
                     return true;
                 }
@@ -38,7 +76,7 @@ public abstract class ThreadedGenerator<T> implements Generator<T>
                 {
                     return false;
                 }
-                if (producer == null)
+                if (thread == null)
                 {
                     startThread();
                 }
@@ -56,7 +94,7 @@ public abstract class ThreadedGenerator<T> implements Generator<T>
                 {
                     throw new NoSuchElementException();
                 }
-                nextItemAvailable = false;
+                yieldCalled = false;
                 return yielded;
             }
 
@@ -68,23 +106,13 @@ public abstract class ThreadedGenerator<T> implements Generator<T>
         };
     }
 
-
-
-
-
     @SuppressWarnings("java:S6213")
     protected void yield(T value)
     {
-        this.yield(this, value);
-    }
-
-    @SuppressWarnings("java:S6213")
-    void yield(ThreadedGenerator<T> target, T value)
-    {
-        target.yielded = value;
-        target.nextItemAvailable = true;
-        target.producerLock.start();
-        target.consumerLock.stop();
+        yielded = value;
+        yieldCalled = true;
+        producerLock.start();
+        consumerLock.stop();
     }
 
     private void wrapperGenerate()
@@ -98,16 +126,16 @@ public abstract class ThreadedGenerator<T> implements Generator<T>
 
     private void startThread()
     {
-        producer = Executors.defaultThreadFactory().newThread(this::wrapperGenerate);
-        producer.start();
+        thread = Executors.defaultThreadFactory().newThread(this::wrapperGenerate);
+        thread.start();
     }
 
     @SuppressWarnings("java:S1113")
     @Override
     protected void finalize() throws Throwable
     {
-        producer.interrupt();
-        producer.join();
+        thread.interrupt();
+        thread.join();
         super.finalize();
     }
 
@@ -143,8 +171,5 @@ public abstract class ThreadedGenerator<T> implements Generator<T>
             }
         }
     }
-
-
-
 
 }
